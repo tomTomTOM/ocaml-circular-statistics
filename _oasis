@@ -1,0 +1,12 @@
+OASISFormat: 0.3
+Name:        circstat
+Version:     0.1
+Synopsis:    Ocaml circular statistics library
+Authors:     Greg Hale
+License:     LGPL-2.1 with OCaml linking exception
+
+Library circstat
+  Path:       ./
+  BuildTools: ocamlbuild
+  Modules:    Circstat
+  
