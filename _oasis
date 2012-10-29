@@ -6,7 +6,7 @@ Authors:     Greg Hale
 License:     LGPL-2.1 with OCaml linking exception
 
 Library circstat
-  Path:       ./
+  Path:       src/
   BuildTools: ocamlbuild
   Modules:    Circstat
   
