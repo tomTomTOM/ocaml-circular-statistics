@@ -1,0 +1,11 @@
+# OASIS_START
+# DO NOT EDIT (digest: d5c79589b537de320352cd616b734a10)
+version = "0.1"
+description = "Ocaml circular statistics library"
+archive(byte) = "circstat.cma"
+archive(byte, plugin) = "circstat.cma"
+archive(native) = "circstat.cmxa"
+archive(native, plugin) = "circstat.cmxs"
+exists_if = "circstat.cma"
+# OASIS_STOP
+
