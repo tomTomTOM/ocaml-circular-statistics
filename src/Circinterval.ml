@@ -1,3 +1,5 @@
+open Circstat
+
 type limit_style = Open | Closed
 type circ_limit = { lim: float;
                     style: limit_style }

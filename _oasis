@@ -4,9 +4,10 @@ Version:     0.1
 Synopsis:    Ocaml circular statistics library
 Authors:     Greg Hale
 License:     LGPL-2.1 with OCaml linking exception
+Plugins:     META (0.3)
 
 Library circstat
-  Path:       src/
+  Path:       src
   BuildTools: ocamlbuild
   Modules:    Circstat
   
