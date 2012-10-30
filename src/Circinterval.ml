@@ -1,4 +1,4 @@
-open Circstat
+open Circbase
 
 type limit_style = Open | Closed
 type circ_limit = { lim: float;
