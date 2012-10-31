@@ -1,7 +1,20 @@
 (* 'top' Module *)
-open Circbase
+include Circbase
 
-open Circmean
+include Circinterval
+
+include Circmean
+
+include Circmedian
+
+
+
+
+
+
+
+
+
 
 
 

@@ -1,51 +1,47 @@
+open Circbase
+open Circinterval
 open Circmean
 
 
-(* Change phase angle limits
-   (ie describe phase angle in (-pi,pi) or (0,2pi) *)
-let to_range (lower,upper) theta =
-  (mod_float (theta -. lower) pi2) +. lower
+let arr = Array.init 99 (fun x -> float_of_int (x+11));;
+let a = circspace ~start: (pi *. 3. /. 2.) ~stop: (pi /. 2.) 100;;
 
-let binary_closest arr ans =
-  let mid_ind a b = (b-a)/2 + a in
-  let rec aux min max =
-    let test_ind = mid_ind min max in 
-    Printf.printf "Test ind: %d  Min: %d  Max %d \n" 
-      test_ind min max;
-    let d = compare ans arr.(test_ind) in 
-    match d with
-        0 -> (test_ind, arr.(test_ind))
-      | _ when d < 0 -> if test_ind <> max then aux min test_ind
-        else (test_ind, arr.(test_ind))
-      | _ when d > 0 -> if test_ind <> min then aux test_ind max
-        else (test_ind, arr.(test_ind))
-      | _ -> failwith "Impossible case"
+
+let median arr =
+
+  let sample_mean = mean arr in 
+  let th = Array.copy arr in 
+  Array.fast_sort ccompare th;
+
+  let samp_points = if ((Array.length th) mod 2 = 1) then th 
+    else (intermediate_points th) in
+
+  let forward_int (ind: int) = mk_interval 
+   (samp_points.(ind)) Closed
+   ((samp_points.(ind)) @+ pi) Closed
+  and backward_int (ind: int) = mk_interval
+    ((samp_points.(ind)) @- pi) Closed
+    (samp_points.(ind)) Closed in
+  let div_imbalance (ind: int) = (n_in_interval arr (forward_int ind)) -
+    (n_in_interval arr (backward_int ind)) in
+ 
+  let rec aux test_ind n_tries =
+    let di = div_imbalance test_ind in
+
+    Printf.printf "Try: %d  ind:%d  fwd:%s  bwd:%s  di:%d\n" n_tries test_ind (string_of_interval (forward_int test_ind))
+      (string_of_interval (backward_int test_ind)) di;
+
+    match di with 
+        0 -> samp_points.(test_ind)
+      | _ ->  let step = if (n_tries < 100) then (di+(2*(signi di)))/3  else 1  in
+              aux ((test_ind+step) mod (Array.length samp_points)) (n_tries + 1)
   in
-  aux 0 (Array.length arr - 1)
+
+  aux (binary_closest_ind samp_points sample_mean) 0 
+      
 ;;
-
-
-let arr = Array.init 100 (fun x -> float_of_int (x+11));;
-
-let binary_array_find_first_above lim arr =
-  let mid_ind a b = (b - a)/2
-  let aux min max =
-
-;;
-    
-
-val median theta =
-  let sample_mean = mean theta in 
-  let th = Array.copy theta in 
-  let n_elt_even = mod (Aray.length th) 2 = 0 in
-  Array.sort th;
-  let rec try_median m =
-    if (n_in_range th (m
-
-  let (i,_) = binary_closest th sample_mean in 
-  let 
-  let 
-
+        
+let c = 1
 
 
 
