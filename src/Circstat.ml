@@ -1,7 +1,7 @@
 (* 'top' Module *)
-include Circbase
+module Base = Circbase
 
-include Circinterval
+module Interval = Circinterval
 
 include Circmean
 
