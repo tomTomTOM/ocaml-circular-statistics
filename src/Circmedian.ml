@@ -6,6 +6,8 @@ open Circmean
 let arr = Array.init 99 (fun x -> float_of_int (x+11));;
 let a = circspace ~start: (pi *. 3. /. 2.) ~stop: (pi /. 2.) 100;;
 
+let signi x = if x < 0 then -1 else 1
+let signf x = if x < 0. then -1. else 1.
 
 let median arr =
 

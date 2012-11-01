@@ -3,10 +3,14 @@
     Also useful to library user for generating bins and comparing
     circular values *)
 
+(** Pi and 2Pi *)
+val pi : float
+val pi2 : float
+
 (** {6 Basic comparison operators} *)
 
 (** (%) + modulo operator *)
-val (%) : float -> float
+val (%) : float -> float -> float
 (** Always returns positive remainders. *)
 
 (** Circular less-than *)
@@ -55,10 +59,55 @@ val (@+) : float -> float -> float
 val circspace : 
   ?offset:float -> 
   ?halfshift:bool-> 
+  ?addfinal:bool ->
   ?start:float -> ?stop:float -> 
   int -> float array
-(** [circspace ~offset:0. ~halfshift:false ~start:0. ~stop:pi2 n]
+(** [circspace ~offset:0. ~halfshift:false ~addfinal: false ~start:0. ~stop:pi2 n] returns
+    an array of N floats evenly spaced, beginning at ~start and ending one spacing before
+    ~stop (when ~addfinal:false), or at ~stop itself (when ~addfinal:true).  Defaults
+    produce coverage of the circle, useful as the abscissa of a rose plot.
+    With ~halfshift:true points are shifted forward by one half bin, and become useful
+    as bin boundaries for circular histogram.
+    With ~halfshift:true and ~addfinal:true, the final value of the array is greater
+    than ~stop. *)
 
+val intermediate_points : float array -> float array
+(** [intermediate_points phase_array] returns an array of points, spaced evenly between
+    array-consecutive pairs of points in the index array.  This is handy for converting
+    between bin-centers and bin-edges for circular histograms. *)
+
+
+(** {6 Search in sorted lists} *)
+
+(** Circular comparison *)
+val ccompare : float -> float -> int
+(** Standard compare function for phase variables, used in sorting *)
+
+(** Circular closest-element lookup *)
+val binary_closest_ind : float array -> float -> int
+(** [binary_closest_ind phase_array key_value] returns the index of the phase array 
+    element with angle closest to the key.  ASSUMES phase_array is sorted ascending
+    (counterclockwise) *)
+
+(** Circular closest index above *)
+val closest_ind_above : float array -> float -> int
+(** [closest_ind_above phase_array phase] returns the index of the closest
+    array element e that is @> phase.  ASSUMES phase_array is sorted ascending *)
+
+(** Circular closest index above or equal *)
+val closest_ind_above_or_equal : float array -> float -> int
+(** Same as closest_ind_above, but also accept array value equal to input key
+    ASSUMES that phase_array is sorted ascending *)
+
+(** Circluar closest index below *)
+val closest_ind_below : float array -> float -> int
+(** Same as closest_ind_above, but for array values smaller than the key.
+    ASSUMES that phase_array is sorted ascending *)
+
+(** Circular closest index below or equal *)
+val closest_ind_below_or_equal : float array -> float -> int
+(** Same as closest_ind_above, but for array elements @<= than the key.
+    ASSUMES that phase_array is sorted ascending *)
 
 
 

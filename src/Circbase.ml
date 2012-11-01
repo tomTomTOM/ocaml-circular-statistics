@@ -63,8 +63,10 @@ let comparison_test () =
 let circspace
     ?(offset = 0.) 
     ?(halfshift = false) 
+    ?(addfinal = false)
     ?(start = 0.) ?(stop = pi2) n =
-  let spacing = ((stop @- start) % pi2) /. (float_of_int n) in
+  let aux_n = if not addfinal then n else (n-1) in
+  let spacing = ((stop @- start) % pi2) /. (float_of_int aux_n) in
   let total_offset = 
     if halfshift then 
       offset +. (spacing /. 2.) else
@@ -74,6 +76,8 @@ let circspace
     (((spacing *. (float_of_int i)) +. start) +. total_offset) % pi2)
 
 
+
+(* Unused? *)
 (* Change phase angle limits
    (ie describe phase angle in (-pi,pi) or (0,2pi) *)
 let to_range (lower,upper) theta =
@@ -161,11 +165,8 @@ let intermediate_points arr =
     (fun i -> arr.(i) @+ ((dist_to_next arr_pad i) /. 2.))
 
 
-let n_in_ind_range first last total =
-  if last >= first then (last - first + 1) else
-    (* (total- first) + (last + 1) =    *)
-    (total - first + last + 1)
-
+(*
+(* Unused?  Replaced by n_in_interval from Circinterval module *)
 let n_in_theta_range arr th0 th1 =
   try
     let ind0 = closest_ind_above_or_equal arr th0
@@ -176,11 +177,9 @@ let n_in_theta_range arr th0 th1 =
       Not_found -> Printf.printf "Open interval: reporting ALL points\n"; 
         Array.length arr
     | _ -> failwith "Impossible case"
-        
+*)      
 
 
-let signi x = if x < 0 then -1 else 1
-let signf x = if x < 0. then -1. else 1.
 
 let test_a = circspace ~start:(pi *. 3. /. 2.) ~stop: (pi /. 2.) 100
 let test_b = circspace ~start:0. ~stop:pi 10001
