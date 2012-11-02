@@ -10,4 +10,4 @@ Library circstat
   Path:       src
   BuildTools: ocamlbuild
   Modules:    Circstat
-  
+  BuildDepends: gsl-ocaml  

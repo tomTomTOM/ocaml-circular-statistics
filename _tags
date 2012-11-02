@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 0108d0db5c088b2b27fe5d305f08ea85)
+# DO NOT EDIT (digest: f7f6448f4d5898985fdd5dd5d3e5a3f3)
 # Ignore VCS directories, you can use the same kind of rule outside 
 # OASIS_START/STOP if you want to exclude directories that contains 
 # useless stuff for the build process
@@ -15,4 +15,5 @@
 "_darcs": not_hygienic
 # Library circstat
 "src/circstat.cmxs": use_circstat
+<src/*.ml{,i}>: pkg_gsl-ocaml
 # OASIS_STOP
