@@ -1,8 +1,8 @@
 # OASIS_START
-# DO NOT EDIT (digest: 00b05290f66320b8b6a3fcb35371fe84)
+# DO NOT EDIT (digest: cbfd3ecff8df2ea1c8ac341b957e0650)
 version = "0.1"
 description = "Ocaml circular statistics library"
-requires = "gsl-ocaml"
+requires = "gsl"
 archive(byte) = "circstat.cma"
 archive(byte, plugin) = "circstat.cma"
 archive(native) = "circstat.cmxa"
