@@ -55,8 +55,9 @@ let rec n_in_interval ?(sorted=false) arr interval =
   if (not sorted) then
     (* Hand-count *)
     begin
-      Array.fold_left (+) 0
-        (Array.map (fun x -> if (in_interval interval x) then 1 else 0) arr)
+      int_of_float(
+      phase_vector_fold_left (+.) 0.
+        (phase_vector_map (fun x -> if (in_interval interval x) then 1. else 0.) arr))
     end
   else
     begin
@@ -71,7 +72,7 @@ let rec n_in_interval ?(sorted=false) arr interval =
       try
         let ind0 = cmp0 arr interval.t0.lim
         and ind1 = cmp1 arr interval.t1.lim in
-        n_in_ind_range ind0 ind1 (Array.length arr)
+        n_in_ind_range ind0 ind1 (Gsl.Vector.length arr)
       with
           Not_found ->
           (* Bad interval, possibly because start is too far from

@@ -10,6 +10,7 @@ let pi2 = 2. *. pi
 module V = Gsl.Vector
 module M = Gsl.Matrix
 
+type phase_vector = Gsl.Vector.vector
 type vec = Gsl.Vector.vector
 type mat = Gsl.Matrix.matrix
 
@@ -66,7 +67,7 @@ let comparison_test () =
   if res then () else
     failwith "Failed circular comparison unit test."
 
-let phase_vector_set_by_fi f arr = 
+let phase_vector_set_by_fi f (arr: phase_vector) = 
   for n = 0 to (V.length arr - 1) do
     arr.{n} <- f n
   done
@@ -81,10 +82,16 @@ let phase_vector_iter f arr =
     f arr.{n}
   done
 
+let phase_vector_iteri f arr =
+  for n = 0 to (V.length arr -1 ) do
+    f n arr.{n}
+  done
+
 let phase_vector_print arr =
   phase_vector_iter (fun x -> Printf.printf "%f " x) arr;
   print_endline ""
     
+(* Built this way first, then the following way, to test speed *)
 let phase_vector_fold_left_a f i arr =
   let rec aux f subarr accum =
     if V.is_null subarr then accum else
@@ -92,7 +99,8 @@ let phase_vector_fold_left_a f i arr =
   in
   aux f arr i
 
-let phase_vector_fold_left_b f i arr =
+(* This one was a bit faster *)
+let phase_vector_fold_left f i arr =
   let a = ref i in
   for n = 0 to (V.length arr - 1) do
     a := f !a arr.{n}
@@ -102,10 +110,18 @@ let phase_vector_fold_left_b f i arr =
 let phase_vector_map f arr =
   let a = V.create (V.length arr) in
   for n = 0 to (V.length arr) - 1 do
-    V.set a n (f (V.get arr n))
+    a.{n} <- (f arr.{n})
   done;
   a
 
+let phase_vector_mapi f arr =
+  let a = V.create (V.length arr) in 
+  for n = 0 to (V.length arr) - 1 do
+    a.{n} <- (f n arr.{n})
+  done;
+  a
+
+(* throwaway profile function *)
 let timer n f arg =
   let t0 = ref (Unix.gettimeofday ()) in
   for i = 1 to n do
@@ -141,11 +157,11 @@ let closest_of_this_and_neighbors arr ind th =
   let closest_ind = ref ind in
   
   if (ind > 0) & 
-    ((dist arr.(ind-1) th) <  (dist arr.(!closest_ind) th))
+    (dist arr.{ind-1} th) <  (dist arr.{!closest_ind} th)
   then closest_ind := (ind-1) else ();
 
-  if (ind < (Array.length arr -1) ) &
-    ((dist arr.(ind+1) th) < (dist arr.(!closest_ind) th))
+  if (ind < (V.length arr -1) ) &
+    (dist arr.{ind+1} th) < (dist arr.{!closest_ind} th)
   then closest_ind := (ind+1);
   
   !closest_ind
@@ -154,12 +170,12 @@ let ccompare a b =
   if a @= b then 0 else
     if a @< b then -1 else 1
     
-let binary_closest_ind arr th =
+let binary_closest_ind (arr: phase_vector) th =
   let touchup_ind i = closest_of_this_and_neighbors arr i th in
   let mid_ind a b = (b-a)/2 + a in
   let rec aux min max =
     let test_ind = mid_ind min max in 
-    let d = ccompare th arr.(test_ind) in 
+    let d = ccompare th arr.{test_ind} in 
     match d with
         0 -> touchup_ind test_ind
       | _ when d < 0 -> if test_ind <> max then aux min test_ind
@@ -168,69 +184,52 @@ let binary_closest_ind arr th =
         else touchup_ind test_ind
       | _ -> failwith "Impossible case"
   in
-  aux 0 (Array.length arr - 1)
+  aux 0 (V.length arr - 1)
 ;;
 
 let closest_ind_above arr th =
   (* Assuming arr is sorted ascending *)
   let closest_ind = binary_closest_ind arr th in
-  if arr.(closest_ind) @> th then closest_ind else
-      let next_ind = if closest_ind = (Array.length arr - 1) then 0
+  if arr.{closest_ind} @> th then closest_ind else
+      let next_ind = if closest_ind = (V.length arr - 1) then 0
         else closest_ind + 1
       in
-      if arr.(next_ind) @> th then next_ind
+      if arr.{next_ind} @> th then next_ind
       else raise Not_found
       
 
 let closest_ind_above_or_equal arr th =
   let closest_ind = binary_closest_ind arr th in
-  if arr.(closest_ind) = th then closest_ind else
+  if arr.{closest_ind} = th then closest_ind else
     closest_ind_above arr th
 
 
 let closest_ind_below arr th =
   (* Assuming arr is sorted ascending *)
   let closest_ind = binary_closest_ind arr th in
-  if arr.(closest_ind) @< th then closest_ind else
-    let  next_ind = if closest_ind = 0 then Array.length arr -1
+  if arr.{closest_ind} @< th then closest_ind else
+    let  next_ind = if closest_ind = 0 then V.length arr -1
       else closest_ind - 1
     in
-      if arr.(next_ind) @< th then next_ind
+      if arr.{next_ind} @< th then next_ind
       else raise Not_found
 
 let closest_ind_below_or_equal arr th =
   let closest_ind = binary_closest_ind arr th in
-  if arr.(closest_ind) = th then closest_ind else
+  if arr.{closest_ind} = th then closest_ind else
     closest_ind_below arr th
 
 
 let intermediate_points arr =
   (* Add first element of arr again at the end, because we want
      to find the point between arr(last) and arr(first), too *)
-  let arr_pad =  Array.concat [arr; [| arr.(1) |] ] in
-
+  let arr_pad =  V.create (V.length arr + 1) in
+  arr_pad.{V.length arr_pad - 1} <- arr_pad.{0};
   (* We're following the circle counterclockwise, so
      all incremental steps have to be in [0,pi2], hence
      the mod by pi2 (-. and @- often give negative diffs) *)
-
-  let dist_to_next arr i = (arr.(i+1) -. arr.(i)) % pi2 in
-  Array.init (Array.length arr) 
-    (fun i -> arr.(i) @+ ((dist_to_next arr_pad i) /. 2.))
-
-
-(*
-(* Unused?  Replaced by n_in_interval from Circinterval module *)
-let n_in_theta_range arr th0 th1 =
-  try
-    let ind0 = closest_ind_above_or_equal arr th0
-    and ind1 = closest_ind_below_or_equal arr th1 in
-    Printf.printf "ind0: %d  int1: %d\n" ind0 ind1;
-    n_in_ind_range ind0 ind1 (Array.length arr)
-  with
-      Not_found -> Printf.printf "Open interval: reporting ALL points\n"; 
-        Array.length arr
-    | _ -> failwith "Impossible case"
-*)      
+  let dist_to_next i = (arr_pad.{i+1} -. arr_pad.{i}) % pi2 in
+  phase_vector_mapi (fun i x -> x +. (dist_to_next i) /. 2.) arr
 
 
 

@@ -9,6 +9,8 @@ val pi2 : float
 
 (** Common vector type*)
 type phase_vector = Gsl.Vector.vector
+type vec = phase_vector
+type mat = Gsl.Matrix.matrix
 
 (** {6 Basic comparison operators} *)
 
@@ -57,7 +59,7 @@ val (@+) : float -> float -> float
 (** [a @+ b] returns the sum of phases a and b, modulo'd
     into the range [-pi, pi) *)
 
-(** {6 Array creation} *)
+(** {6 Array creation / manipulation} *)
 
 val circspace : 
   ?offset:float -> 
@@ -79,6 +81,19 @@ val intermediate_points : phase_vector -> phase_vector
     array-consecutive pairs of points in the index array.  This is handy for converting
     between bin-centers and bin-edges for circular histograms. *)
 
+val phase_vector_init : int -> (int -> float) -> phase_vector
+(** [phase_vector_init n f] creates an n-element vector with elements determined from the indices *)
+
+val phase_vector_fold_left : ('a -> float -> 'a) -> 'a -> phase_vector -> 'a
+(** [phase_vector_fold_left f init_val phase_array] *)
+
+val phase_vector_map : (float -> float) -> phase_vector -> phase_vector
+
+val phase_vector_mapi : (int -> float -> float) -> phase_vector -> phase_vector
+
+val phase_vector_iter : (float -> unit) -> phase_vector -> unit
+
+val phase_vector_iteri : (int -> float -> unit) -> phase_vector -> unit
 
 (** {6 Search in sorted lists} *)
 
