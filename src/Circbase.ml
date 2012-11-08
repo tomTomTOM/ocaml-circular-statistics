@@ -7,6 +7,12 @@ let (%) a b =
 let pi = 4. *. atan 1.
 let pi2 = 2. *. pi
 
+module V = Gsl.Vector
+module M = Gsl.Matrix
+
+type vec = Gsl.Vector.vector
+type mat = Gsl.Matrix.matrix
+
 (* Circular comparisons
    a < b when linear b is greater
    than linear a, until it becomes
@@ -60,19 +66,66 @@ let comparison_test () =
   if res then () else
     failwith "Failed circular comparison unit test."
 
+let phase_vector_set_by_fi f arr = 
+  for n = 0 to (V.length arr - 1) do
+    arr.{n} <- f n
+  done
+
+let phase_vector_init n f =
+  let arr = V.create n in
+  phase_vector_set_by_fi f arr;
+  arr
+  
+let phase_vector_iter f arr =
+  for n = 0 to (V.length arr -1 ) do
+    f arr.{n}
+  done
+
+let phase_vector_print arr =
+  phase_vector_iter (fun x -> Printf.printf "%f " x) arr;
+  print_endline ""
+    
+let phase_vector_fold_left_a f i arr =
+  let rec aux f subarr accum =
+    if V.is_null subarr then accum else
+    aux f (V.subvector subarr 1 (V.length subarr - 1)) (f accum subarr.{0})
+  in
+  aux f arr i
+
+let phase_vector_fold_left_b f i arr =
+  let a = ref i in
+  for n = 0 to (V.length arr - 1) do
+    a := f !a arr.{n}
+  done;
+  !a
+
+let phase_vector_map f arr =
+  let a = V.create (V.length arr) in
+  for n = 0 to (V.length arr) - 1 do
+    V.set a n (f (V.get arr n))
+  done;
+  a
+
+let timer n f arg =
+  let t0 = ref (Unix.gettimeofday ()) in
+  for i = 1 to n do
+    f arg
+  done;
+  ((Unix.gettimeofday ()) -. !t0) /. (float_of_int n)
+
 let circspace
     ?(offset = 0.) 
     ?(halfshift = false) 
     ?(addfinal = false)
     ?(start = 0.) ?(stop = pi2) n =
   let aux_n = if not addfinal then n else (n-1) in
-  let spacing = ((stop @- start) % pi2) /. (float_of_int aux_n) in
+  let spacing = (stop -. start) /. (float_of_int aux_n) in
   let total_offset = 
     if halfshift then 
       offset +. (spacing /. 2.) else
       offset
   in
-  Array.init n (fun i -> 
+  phase_vector_init n (fun i -> 
     (((spacing *. (float_of_int i)) +. start) +. total_offset) % pi2)
 
 
