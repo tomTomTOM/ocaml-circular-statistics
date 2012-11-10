@@ -1,26 +1,7 @@
 open Circstat.Base
 
-type distribution = 
-    VonMises of (float * float)
-  | WrappedNormal of (float * float)
-  | WrappedCauchy of (float * float)
-  | Cardioid of (float * float)
-  | CircUniform
-  | LinNormal of (float * float)
-  | LinUniform of (float * float)
-
 let inv_pi2 = 1. /. pi2
 let inv_sqrt_pi2 = 1. /. sqrt(pi2)
-
-let pdf dist t =
-  match dist with
-      VonMises (mu, kappa) -> vm_pdf mu kappa t
-    | CircUniform -> inv_pi2
-    | WrappedNormal (mu, rho) -> failwith "Wrapped normal distribution not implemented"
-    | WrappedCauchy (mu, rho) -> wrapped_cauchy_pdf mu rho t
-    | Cardioid (mu, rho) -> cardioid_pdf mu rho t
-    | LinUniform (bg, en) -> lin_uniform_pdf bg en t
-
 
 let vm_pdf mu kappa t=
   (exp (kappa *. cos (t -. mu))) /. (pi2 *. (Gsl.Sf.bessel_I0 kappa))
@@ -38,9 +19,68 @@ let wrapped_cauchy_pdf mu rho t =
 
 let lin_uniform_pdf bg en t = if t >= bg && t <= en then 1. /. (en -. bg) else 0.
 
-let lin_normal_pdf mu sigma t =
+let lin_normal_pdf mu sigma_sq t =
+  let sigma = sqrt sigma_sq in
   1. *. inv_sqrt_pi2 /. sigma *. 
     exp ( (-. 1.) *. ((t -. mu) ** 2.) /. (sqrt( 2. *. sigma *. sigma)) )
+
+type dist_param =
+    Constant of float
+  | Dependent of (float -> float)
+
+type distribution = 
+    VonMises of (dist_param * dist_param)
+  | WrappedNormal of (dist_param * dist_param)
+  | WrappedCauchy of (dist_param * dist_param)
+  | Cardioid of (dist_param * dist_param)
+  | CircUniform
+  | LinNormal of (dist_param * dist_param)
+  | LinUniform of (dist_param * dist_param)
+
+(* P(Y|X=x) = N( u=(mx+b), ssq) *)
+(* P(Y=y, X=x) = P(Y|X=x)*P(X=x) *)
+(* P(Z=z, Y=y, X=x) = P(Z=z | Y=y, X=x)*P(Y=y, X=x) *)
+
+let rec eval_pdf (dists: distribution list) (xs: float list) =
+  match List.combine dists xs with
+    | (dv_dist,dv)::tl ->
+        begin        
+          let get_param = function
+          Constant c -> c
+            | Dependent f -> 
+                (match xs with 
+                    hd::iv::tl -> f iv 
+                  | hd::[] -> failwith ("Requested deeper parameter from" ^
+                      " deepest distribution.")
+                )
+          in 
+          let p_dv_given_iv =
+          match dv_dist with
+              VonMises (mu, kappa) -> 
+                vm_pdf (get_param mu) (get_param kappa) dv
+            | CircUniform -> inv_pi2
+            | WrappedNormal (mu, rho) -> 
+                failwith "Wrapped normal distribution not implemented"
+            | WrappedCauchy (mu, rho) -> 
+                wrapped_cauchy_pdf (get_param mu) (get_param rho) dv
+            | Cardioid (mu, rho) -> 
+                cardioid_pdf (get_param mu) (get_param rho) dv
+            | LinUniform (bg, en) -> 
+                lin_uniform_pdf (get_param bg) (get_param en) dv
+            | LinNormal (mu, sigma_sq) ->
+                lin_normal_pdf (get_param mu) (get_param sigma_sq) dv
+          in 
+          let p_iv = eval_pdf (List.tl dists) (List.tl xs) in 
+          p_dv_given_iv *. p_iv
+        end
+    |  _ -> 1.
+
+
+let pdf_grid (xs: float list list) = 
+  List.map 
+
+
+let d = 1
 
 
 (*
