@@ -76,11 +76,37 @@ let rec eval_pdf (dists: distribution list) (xs: float list) =
     |  _ -> 1.
 
 
-let pdf_grid (xs: float list list) = 
-  List.map 
+let listify xl = List.map (fun x -> [x]) xl
+let add_1_to_all x l = List.map (fun li -> x ::li) l
+let add_all_to_all xl l = List.map (fun xli -> add_1_to_all xli l) xl
 
+let x_grid (xs: float list list) = 
+  let xs_list = add_all_to_all (List.nth xs 0) 
+    (listify (List.nth xs 1) ) in
+  xs_list
 
-let d = 1
+let map2d f ll =
+  List.map (fun l -> List.map f l) ll
+
+let array_of_list2d ll =
+  Array.of_list (List.map (fun l -> Array.of_list l) ll)
+
+let norm = LinNormal (Constant 2., Constant 10.)
+let corr_norm = LinNormal (Constant 1., Dependent (fun x -> 5. -. abs_float(x -. 2.)))
+let x = Array.to_list (Gsl.Vector.to_array (circspace 500))
+let xs = x_grid [ x; x ]
+let pdf = map2d (eval_pdf [corr_norm;norm]) xs
+
+let cmap x = Graphics.rgb 
+  0 (int_of_float (x *. 2055.)) (int_of_float (x *. 2055.))
+
+let () =
+Graphics.open_graph " 500x500"; 
+
+let im = Graphics.make_image (array_of_list2d (map2d cmap pdf)) in
+
+Graphics.draw_image im 0 0
+
 
 
 (*
