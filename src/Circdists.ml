@@ -1,104 +1,104 @@
-open Circstat.Base
+{-# LANGUAGE ScopedTypeVariables #-}
+import Circstat.Base -- for this to work, you need to rename Circbase.ml to Circstat/Base.hs
 
-let inv_pi2 = 1. /. pi2
-let inv_sqrt_pi2 = 1. /. sqrt(pi2)
+inv_pi2 = 1 / pi2
+inv_sqrt_pi2 = 1 / (sqrt pi2)
 
-let vm_pdf mu kappa t=
-  (exp (kappa *. cos (t -. mu))) /. (pi2 *. (Gsl.Sf.bessel_I0 kappa))
+--vm_pdf mu kappa t=
+--  (exp (kappa * cos (t - mu))) / (pi2 * (Gsl.Sf.bessel_I0 kappa))
 
-let cardioid_pdf mu rho t =
-  if rho < 0. || rho > 0.5 then failwith "Cardioid rho parameter must be in [0,1/2]" 
+cardioid_pdf mu rho t =
+  if rho < 0 || rho > 0.5 then error "Cardioid rho parameter must be in [0,1/2]" 
   else
-    inv_pi2 *. (1. +. 2. *. rho *. cos (t @- mu))
+    inv_pi2 * (1 + 2 * rho * cos (t @- mu)) 
 
-let wrapped_cauchy_pdf mu rho t =
-  if rho < 0. || rho > 1. then failwith "Wrapped cauchy rho must be in [0, 1]"
+{- Note that there's more idiomatic ways of writing this; this is just a straight translation. -}
+
+wrapped_cauchy_pdf mu rho t =
+  if rho < 0 || rho > 1 then error "Wrapped cauchy rho must be in [0, 1]"
   else
-    inv_pi2 *. (1. -. rho *. rho) /. 
-      (1. +. rho *. rho -. (2. *. rho *. (cos(t @- mu))))
+    inv_pi2 * (1 - rho * rho) /
+      (1 + rho * rho - (2 * rho * (cos(t @- mu))))
 
-let lin_uniform_pdf bg en t = if t >= bg && t <= en then 1. /. (en -. bg) else 0.
+lin_uniform_pdf bg en t = if t >= bg && t <= en then 1 / (en - bg) else 0
 
-let lin_normal_pdf mu sigma_sq t =
+lin_normal_pdf mu sigma_sq t =
   let sigma = sqrt sigma_sq in
-  1. *. inv_sqrt_pi2 /. sigma *. 
-    exp ( (-. 1.) *. ((t -. mu) ** 2.) /. (sqrt( 2. *. sigma *. sigma)) )
+  1 * inv_sqrt_pi2 / sigma *
+    exp ( (-1) * ((t - mu) ** 2) / (sqrt( 2 * sigma * sigma)) )
 
-type dist_param =
-    Constant of float
-  | Dependent of (float -> float)
+data DistParam =
+    Constant Float
+  | Dependent (Float -> Float)
 
-type distribution = 
-    VonMises of (dist_param * dist_param)
-  | WrappedNormal of (dist_param * dist_param)
-  | WrappedCauchy of (dist_param * dist_param)
-  | Cardioid of (dist_param * dist_param)
+data Distribution = 
+    VonMises (DistParam, DistParam)
+  | WrappedNormal (DistParam, DistParam)
+  | WrappedCauchy (DistParam, DistParam)
+  | Cardioid (DistParam, DistParam)
   | CircUniform
-  | LinNormal of (dist_param * dist_param)
-  | LinUniform of (dist_param * dist_param)
+  | LinNormal (DistParam, DistParam)
+  | LinUniform (DistParam, DistParam)
 
-(* P(Y|X=x) = N( u=(mx+b), ssq) *)
-(* P(Y=y, X=x) = P(Y|X=x)*P(X=x) *)
-(* P(Z=z, Y=y, X=x) = P(Z=z | Y=y, X=x)*P(Y=y, X=x) *)
+{- P(Y|X=x) = N( u=(mx+b), ssq) -}
+{- P(Y=y, X=x) = P(Y|X=x)*P(X=x) -}
+{- P(Z=z, Y=y, X=x) = P(Z=z | Y=y, X=x)*P(Y=y, X=x) -}
 
-let rec eval_pdf (dists: distribution list) (xs: float list) =
-  match List.combine dists xs with
-    | (dv_dist,dv)::tl ->
-        begin        
-          let get_param = function
-          Constant c -> c
-            | Dependent f -> 
-                (match xs with 
-                    hd::iv::tl -> f iv 
-                  | hd::[] -> failwith ("Requested deeper parameter from" ^
+rec eval_pdf (dists :: [Distribution]) (xs :: [Float]) =
+  case (zip dists xs) of
+    ((dv_dist,dv):tl) ->
+      let get_param Constant c = c
+          get_param Dependent f = 
+                (case xs of 
+                    (hd:iv:tl) -> f iv 
+                    (hd:[]) -> error ("Requested deeper parameter from" ^
                       " deepest distribution.")
                 )
-          in 
-          let p_dv_given_iv =
-          match dv_dist with
+          p_dv_given_iv =
+            case dv_dist of
               VonMises (mu, kappa) -> 
                 vm_pdf (get_param mu) (get_param kappa) dv
-            | CircUniform -> inv_pi2
-            | WrappedNormal (mu, rho) -> 
-                failwith "Wrapped normal distribution not implemented"
-            | WrappedCauchy (mu, rho) -> 
+              CircUniform -> inv_pi2
+              WrappedNormal (mu, rho) -> 
+                error "Wrapped normal distribution not implemented"
+              WrappedCauchy (mu, rho) -> 
                 wrapped_cauchy_pdf (get_param mu) (get_param rho) dv
-            | Cardioid (mu, rho) -> 
+              Cardioid (mu, rho) -> 
                 cardioid_pdf (get_param mu) (get_param rho) dv
-            | LinUniform (bg, en) -> 
+              LinUniform (bg, en) -> 
                 lin_uniform_pdf (get_param bg) (get_param en) dv
-            | LinNormal (mu, sigma_sq) ->
+              LinNormal (mu, sigma_sq) ->
                 lin_normal_pdf (get_param mu) (get_param sigma_sq) dv
-          in 
-          let p_iv = eval_pdf (List.tl dists) (List.tl xs) in 
-          p_dv_given_iv *. p_iv
+          p_iv = eval_pdf (tail dists) (tail xs) in 
+          p_dv_given_iv * p_iv
         end
-    |  _ -> 1.
+    _ -> 1
 
 
-let listify xl = List.map (fun x -> [x]) xl
-let add_1_to_all x l = List.map (fun li -> x ::li) l
-let add_all_to_all xl l = List.map (fun xli -> add_1_to_all xli l) xl
+listify xl = map (\x -> [x]) xl
+add_1_to_all x l = map (\li -> x :li) l
+add_all_to_all xl l = map (\xli -> add_1_to_all xli l) xl
 
-let x_grid (xs: float list list) = 
-  let xs_list = add_all_to_all (List.nth xs 0) 
-    (listify (List.nth xs 1) ) in
-  xs_list
+x_grid (xs :: [[Float]]) = 
+  let xs_list = add_all_to_all (xs !! 0) (listify (xs !! 1)) 
+  in xs_list
 
-let map2d f ll =
-  List.map (fun l -> List.map f l) ll
+map2d f ll =
+  map (\l -> map f l) ll
 
-let array_of_list2d ll =
-  Array.of_list (List.map (fun l -> Array.of_list l) ll)
+array_of_list2d ll =
+  Array.fromList (map (\l -> Array.of_list l) ll)
 
-let norm = LinNormal (Constant 2., Constant 10.)
-let corr_norm = LinNormal (Constant 1., Dependent (fun x -> 5. -. abs_float(x -. 2.)))
-let x = Array.to_list (Gsl.Vector.to_array (circspace 500))
-let xs = x_grid [ x; x ]
-let pdf = map2d (eval_pdf [corr_norm;norm]) xs
+norm = LinNormal (Constant 2, Constant 10)
+corr_norm = LinNormal (Constant 1, Dependent (\x -> 5 - (abs (x - 2))))
+-- x = Array.to_list (Gsl.Vector.to_array (circspace 500))
+xs = x_grid [ x, x ]
+pdf = map2d (eval_pdf [corr_norm,norm]) xs
 
-let cmap x = Graphics.rgb 
-  0 (int_of_float (x *. 2055.)) (int_of_float (x *. 2055.))
+{-
+
+cmap x = Graphics.rgb 
+  0 (int_of_float (x * 2055.)) (int_of_float (x * 2055.))
 
 let () =
 Graphics.open_graph " 500x500"; 
@@ -177,3 +177,4 @@ let time n f a =
 
 
 
+-}
